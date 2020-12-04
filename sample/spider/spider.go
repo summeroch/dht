@@ -20,7 +20,7 @@ type bitTorrent struct {
 	Name     string    `json:"name"`
 	Files    []file    `json:"files,omitempty"`
 	Length   int       `json:"length,omitempty"`
-	Nowtime  time.Time `json:"time"`
+	Nowtime  time.Time `json:"@timestamp"`
 }
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 		http.ListenAndServe(":6060", nil)
 	}()
 
-	w := dht.NewWire(65536, 1024, 256)
+	w := dht.NewWire(65536, 32767, 10240)
 	go func() {
 		for resp := range w.Response() {
 			metadata, err := dht.Decode(resp.MetadataInfo)
@@ -64,7 +64,7 @@ func main() {
 
 			data, err := json.Marshal(bt)
 			if err == nil {
-				fmt.Printf("%s\n\n", data)
+				fmt.Printf("%s\n", data)
 			}
 		}
 	}()
