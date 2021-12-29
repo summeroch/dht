@@ -3,6 +3,8 @@ package dht
 import (
 	"crypto/rand"
 	"errors"
+	"github.com/summeroch/dht-spider/pkg/basic"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -85,12 +87,12 @@ func encodeCompactIPPortInfo(ip net.IP, port int) (info string, err error) {
 func getLocalIPs() (ips []string) {
 	ips = make([]string, 0, 6)
 
-	addrs, err := net.InterfaceAddrs()
+	address, err := net.InterfaceAddrs()
 	if err != nil {
 		return
 	}
 
-	for _, addr := range addrs {
+	for _, addr := range address {
 		ip, _, err := net.ParseCIDR(addr.String())
 		if err != nil {
 			continue
@@ -117,7 +119,12 @@ func getRemoteIP() (ip string, err error) {
 		return
 	}
 
-	defer res.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			basic.CheckError(err)
+		}
+	}(res.Body)
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {

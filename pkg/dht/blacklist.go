@@ -28,7 +28,7 @@ func newBlackList(size int) *blackList {
 	}
 }
 
-// genKey returns a key. If port is less than 0, the key wil be ip. Ohterwise
+// genKey returns a key. If port is less than 0, the key wil be ip. Otherwise,
 // it will be `ip:port` format.
 func (bl *blackList) genKey(ip string, port int) string {
 	key := ip
@@ -76,7 +76,7 @@ func (bl *blackList) in(ip string, port int) bool {
 
 // clear cleans the expired items every 10 minutes.
 func (bl *blackList) clear() {
-	for _ = range time.Tick(time.Minute * 10) {
+	for range time.Tick(time.Minute * 10) {
 		keys := make([]interface{}, 0, 100)
 
 		for item := range bl.list.Iter() {

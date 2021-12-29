@@ -66,7 +66,7 @@ func (node *node) CompactNodeInfo() string {
 type Peer struct {
 	IP    net.IP
 	Port  int
-	token string
+	Token string
 }
 
 // newPeer returns a new peer pointer.
@@ -74,7 +74,7 @@ func newPeer(ip net.IP, port int, token string) *Peer {
 	return &Peer{
 		IP:    ip,
 		Port:  port,
-		token: token,
+		Token: token,
 	}
 }
 
@@ -127,7 +127,7 @@ func (pm *peersManager) Insert(infoHash string, peer *Peer) {
 	}
 }
 
-// GetPeers returns size-length peers who announces having infoHash.
+// GetPeers returns size-length peers who announce having infoHash.
 func (pm *peersManager) GetPeers(infoHash string, size int) []*Peer {
 	peers := make([]*Peer, 0, size)
 
@@ -146,17 +146,17 @@ func (pm *peersManager) GetPeers(infoHash string, size int) []*Peer {
 	return peers
 }
 
-// kbucket represents a k-size bucket.
-type kbucket struct {
+// KBucket represents a k-size bucket.
+type KBucket struct {
 	sync.RWMutex
 	nodes, candidates *keyedDeque
 	lastChanged       time.Time
 	prefix            *bitmap
 }
 
-// newKBucket returns a new kbucket pointer.
-func newKBucket(prefix *bitmap) *kbucket {
-	bucket := &kbucket{
+// newKBucket returns a new KBucket pointer.
+func newKBucket(prefix *bitmap) *KBucket {
+	bucket := &KBucket{
 		nodes:       newKeyedDeque(),
 		candidates:  newKeyedDeque(),
 		lastChanged: time.Now(),
@@ -166,7 +166,7 @@ func newKBucket(prefix *bitmap) *kbucket {
 }
 
 // LastChanged return the last time when it changes.
-func (bucket *kbucket) LastChanged() time.Time {
+func (bucket *KBucket) LastChanged() time.Time {
 	bucket.RLock()
 	defer bucket.RUnlock()
 
@@ -174,7 +174,7 @@ func (bucket *kbucket) LastChanged() time.Time {
 }
 
 // RandomChildID returns a random id that has the same prefix with bucket.
-func (bucket *kbucket) RandomChildID() string {
+func (bucket *KBucket) RandomChildID() string {
 	prefixLen := bucket.prefix.Size / 8
 
 	return strings.Join([]string{
@@ -183,8 +183,8 @@ func (bucket *kbucket) RandomChildID() string {
 	}, "")
 }
 
-// UpdateTimestamp update bucket's last changed time..
-func (bucket *kbucket) UpdateTimestamp() {
+// UpdateTimestamp update bucket's last changed time.
+func (bucket *KBucket) UpdateTimestamp() {
 	bucket.Lock()
 	defer bucket.Unlock()
 
@@ -193,7 +193,7 @@ func (bucket *kbucket) UpdateTimestamp() {
 
 // Insert inserts node to the bucket. It returns whether the node is new in
 // the bucket.
-func (bucket *kbucket) Insert(no *node) bool {
+func (bucket *KBucket) Insert(no *node) bool {
 	isNew := !bucket.nodes.HasKey(no.id.RawString())
 
 	bucket.nodes.Push(no.id.RawString(), no)
@@ -204,7 +204,7 @@ func (bucket *kbucket) Insert(no *node) bool {
 
 // Replace removes node, then put bucket.candidates.Back() to the right
 // place of bucket.nodes.
-func (bucket *kbucket) Replace(no *node) {
+func (bucket *KBucket) Replace(no *node) {
 	bucket.nodes.Delete(no.id.RawString())
 	bucket.UpdateTimestamp()
 
@@ -230,10 +230,10 @@ func (bucket *kbucket) Replace(no *node) {
 }
 
 // Fresh pings the expired nodes in the bucket.
-func (bucket *kbucket) Fresh(dht *DHT) {
+func (bucket *KBucket) Fresh(dht *DHT) {
 	for e := range bucket.nodes.Iter() {
 		no := e.Value.(*node)
-		if time.Since(no.lastActiveTime) > dht.NodeExpriedAfter {
+		if time.Since(no.lastActiveTime) > dht.NodeExpireAfter {
 			dht.transactionManager.ping(no)
 		}
 	}
@@ -243,7 +243,7 @@ func (bucket *kbucket) Fresh(dht *DHT) {
 type routingTableNode struct {
 	sync.RWMutex
 	children []*routingTableNode
-	bucket   *kbucket
+	bucket   *KBucket
 }
 
 // newRoutingTableNode returns a new routingTableNode pointer.
@@ -276,7 +276,7 @@ func (tableNode *routingTableNode) SetChild(index int, c *routingTableNode) {
 }
 
 // KBucket returns the bucket routingTableNode holds.
-func (tableNode *routingTableNode) KBucket() *kbucket {
+func (tableNode *routingTableNode) KBucket() *KBucket {
 	tableNode.RLock()
 	defer tableNode.RUnlock()
 
@@ -284,7 +284,7 @@ func (tableNode *routingTableNode) KBucket() *kbucket {
 }
 
 // SetKBucket sets the bucket.
-func (tableNode *routingTableNode) SetKBucket(bucket *kbucket) {
+func (tableNode *routingTableNode) SetKBucket(bucket *KBucket) {
 	tableNode.Lock()
 	defer tableNode.Unlock()
 
@@ -353,7 +353,7 @@ func newRoutingTable(k int, dht *DHT) *routingTable {
 }
 
 // Insert adds a node to routing table. It returns whether the node is new
-// in the routingtable.
+// in the routing table.
 func (rt *routingTable) Insert(nd *node) bool {
 	rt.Lock()
 	defer rt.Unlock()
@@ -365,7 +365,7 @@ func (rt *routingTable) Insert(nd *node) bool {
 
 	var (
 		next   *routingTableNode
-		bucket *kbucket
+		bucket *KBucket
 	)
 	root := rt.root
 
@@ -432,7 +432,7 @@ func (rt *routingTable) GetNeighbors(id *bitmap, size int) []*node {
 	return result
 }
 
-// GetNeighborIds return the size-length compact node info closest to id.
+// GetNeighborCompactInfos Get Neighbor Ids return the size-length compact node info closest to id.
 func (rt *routingTable) GetNeighborCompactInfos(id *bitmap, size int) []string {
 	neighbors := rt.GetNeighbors(id, size)
 	infos := make([]string, len(neighbors))
@@ -444,10 +444,10 @@ func (rt *routingTable) GetNeighborCompactInfos(id *bitmap, size int) []string {
 	return infos
 }
 
-// GetNodeKBucktById returns node whose id is `id` and the bucket it
+// GetNodeKBucketByID returns node whose id is `id` and the bucket it
 // belongs to.
-func (rt *routingTable) GetNodeKBucktByID(id *bitmap) (
-	nd *node, bucket *kbucket) {
+func (rt *routingTable) GetNodeKBucketByID(id *bitmap) (
+	nd *node, bucket *KBucket) {
 
 	rt.RLock()
 	defer rt.RUnlock()
@@ -484,14 +484,14 @@ func (rt *routingTable) GetNodeByAddress(address string) (no *node, ok bool) {
 
 // Remove deletes the node whose id is `id`.
 func (rt *routingTable) Remove(id *bitmap) {
-	if nd, bucket := rt.GetNodeKBucktByID(id); nd != nil {
+	if nd, bucket := rt.GetNodeKBucketByID(id); nd != nil {
 		bucket.Replace(nd)
 		rt.cachedNodes.Delete(nd.addr.String())
 		rt.cachedKBuckets.Push(bucket.prefix.String(), bucket)
 	}
 }
 
-// Remove deletes the node whose address is `ip:port`.
+// RemoveByAddr Remove the node whose address is `ip:port`.
 func (rt *routingTable) RemoveByAddr(address string) {
 	v, ok := rt.cachedNodes.Get(address)
 	if ok {
@@ -504,7 +504,7 @@ func (rt *routingTable) Fresh() {
 	now := time.Now()
 
 	for e := range rt.cachedKBuckets.Iter() {
-		bucket := e.Value.(*kbucket)
+		bucket := e.Value.(*KBucket)
 		if now.Sub(bucket.LastChanged()) < rt.dht.KBucketExpiredAfter ||
 			bucket.nodes.Len() == 0 {
 			continue

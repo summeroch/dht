@@ -21,7 +21,7 @@ func newBitmap(size int) *bitmap {
 	return &bitmap{size, make([]byte, div)}
 }
 
-// newBitmapFrom returns a new copyed bitmap pointer which
+// newBitmapFrom returns a new copied bitmap pointer which
 // newBitmap.data = other.data[:size].
 func newBitmapFrom(other *bitmap, size int) *bitmap {
 	bitmap := newBitmap(size)
@@ -67,7 +67,7 @@ func (bitmap *bitmap) Bit(index int) int {
 	return int((uint(bitmap.data[div]) & (1 << uint(7-mod))) >> uint(7-mod))
 }
 
-// set sets the bit at index `index`. If bit is true, set 1, otherwise set 0.
+// set the bit at index `index`. If bit is true, set 1, otherwise set 0.
 func (bitmap *bitmap) set(index int, bit int) {
 	if index >= bitmap.Size {
 		panic("index out of range")
@@ -82,12 +82,12 @@ func (bitmap *bitmap) set(index int, bit int) {
 	}
 }
 
-// Set sets the bit at idnex to 1.
+// Set sets the bit at index to 1.
 func (bitmap *bitmap) Set(index int) {
 	bitmap.set(index, 1)
 }
 
-// Unset sets the bit at idnex to 0.
+// Unset sets the bit at index to 0.
 func (bitmap *bitmap) Unset(index int) {
 	bitmap.set(index, 0)
 }

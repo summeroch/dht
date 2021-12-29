@@ -26,7 +26,7 @@ const (
 	BLOCK = 16384
 	// MaxMetadataSize represents the max medata it can accept
 	MaxMetadataSize = BLOCK * 1000
-	// EXTENDED represents it is a extended message
+	// EXTENDED represents it is extended message
 	EXTENDED = 20
 	// HANDSHAKE represents handshake bit
 	HANDSHAKE = 0
@@ -37,7 +37,7 @@ var handshakePrefix = []byte{
 	111, 116, 111, 99, 111, 108, 0, 0, 0, 0, 0, 16, 0, 1,
 }
 
-// read reads size-length bytes from conn to data.
+// read size-length bytes from conn to data.
 func read(conn *net.TCPConn, size int, data *bytes.Buffer) error {
 	conn.SetReadDeadline(time.Now().Add(time.Second * 15))
 
@@ -169,7 +169,7 @@ type Wire struct {
 
 // NewWire returns a Wire pointer.
 //   - blackListSize: the blacklist size
-//   - requestQueueSize: the max requests it can buffers
+//   - requestQueueSize: the max requests it can buffer
 //   - workerQueueSize: the max goroutine downloading workers
 func NewWire(blackListSize, requestQueueSize, workerQueueSize int) *Wire {
 	return &Wire{
@@ -222,7 +222,7 @@ func (wire *Wire) requestPieces(
 	buffer = nil
 }
 
-// fetchMetadata fetchs medata info accroding to infohash from dht.
+// fetchMetadata fetches medata info according to infohash from dht.
 func (wire *Wire) fetchMetadata(r Request) {
 	var (
 		length       int

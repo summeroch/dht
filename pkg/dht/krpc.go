@@ -24,8 +24,8 @@ const (
 
 // packet represents the information receive from udp.
 type packet struct {
-	data  []byte
-	raddr *net.UDPAddr
+	data        []byte
+	RealAddress *net.UDPAddr
 }
 
 // token represents the token when response getPeers request.
@@ -70,7 +70,7 @@ func (tm *tokenManager) token(addr *net.UDPAddr) string {
 
 // clear removes expired tokens.
 func (tm *tokenManager) clear() {
-	for _ = range time.Tick(time.Minute * 3) {
+	for range time.Tick(time.Minute * 3) {
 		keys := make([]interface{}, 0, 100)
 
 		for item := range tm.Iter() {
@@ -124,7 +124,7 @@ func makeError(t string, errCode int, errMsg string) map[string]interface{} {
 	}
 }
 
-// send sends data to the udp.
+// send data to the udp.
 func send(dht *DHT, addr *net.UDPAddr, data map[string]interface{}) error {
 	dht.conn.SetWriteDeadline(time.Now().Add(time.Second * 15))
 
@@ -484,7 +484,7 @@ func handleRequest(dht *DHT, addr *net.UDPAddr,
 			var nodes string
 			targetID := newBitmapFromString(target)
 
-			no, _ := dht.routingTable.GetNodeKBucktByID(targetID)
+			no, _ := dht.routingTable.GetNodeKBucketByID(targetID)
 			if no != nil {
 				nodes = no.CompactNodeInfo()
 			} else {
@@ -590,8 +590,8 @@ func handleRequest(dht *DHT, addr *net.UDPAddr,
 }
 
 // findOn puts nodes in the response to the routingTable, then if target is in
-// the nodes or all nodes are in the routingTable, it stops. Otherwise it
-// continues to findNode or getPeers.
+// the nodes or all nodes are in the routingTable, it stops. Otherwise,
+// it continues to findNode or getPeers.
 func findOn(dht *DHT, r map[string]interface{}, target *bitmap,
 	queryType string) error {
 
@@ -606,8 +606,7 @@ func findOn(dht *DHT, r map[string]interface{}, target *bitmap,
 
 	hasNew, found := false, false
 	for i := 0; i < len(nodes)/26; i++ {
-		no, _ := newNodeFromCompactInfo(
-			string(nodes[i*26:(i+1)*26]), dht.Network)
+		no, _ := newNodeFromCompactInfo(nodes[i*26:(i+1)*26], dht.Network)
 
 		if no.id.RawString() == target.RawString() {
 			found = true
@@ -764,7 +763,7 @@ func handle(dht *DHT, pkt packet) {
 			<-dht.workerTokens
 		}()
 
-		if dht.blackList.in(pkt.raddr.IP.String(), pkt.raddr.Port) {
+		if dht.blackList.in(pkt.RealAddress.IP.String(), pkt.RealAddress.Port) {
 			return
 		}
 
@@ -779,7 +778,7 @@ func handle(dht *DHT, pkt packet) {
 		}
 
 		if f, ok := handlers[response["y"].(string)]; ok {
-			f(dht, pkt.raddr, response)
+			f(dht, pkt.RealAddress, response)
 		}
 	}()
 }
