@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/summeroch/dht-spider/pkg/basic"
 	"github.com/summeroch/dht-spider/pkg/es"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -16,7 +16,7 @@ func main() {
 	gin.DisableConsoleColor()
 	f, _ := os.Create("./search.log")
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
-	router := gin.Default()
+	router := gin.New()
 	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
 			param.ClientIP,
@@ -31,7 +31,8 @@ func main() {
 		)
 	}))
 	router.Use(gin.Recovery())
-	router.GET("/", func(c *gin.Context) {
+
+	router.GET("/search", func(c *gin.Context) {
 		name := c.Query("name")
 		res := es.Search(name)
 		hit := int(res["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64))
@@ -56,6 +57,6 @@ func main() {
 
 	err := router.Run(":8080")
 	if err != nil {
-		basic.CheckError(err)
+		log.Fatalln(err)
 	}
 }

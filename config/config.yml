@@ -1,5 +1,3 @@
-app:
-  mode: CrawlMode
 elasticsearch:
   addresses: [ http://your.elasticsearch.host.ip:9200 ]
   username: ""

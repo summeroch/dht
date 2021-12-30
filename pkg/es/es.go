@@ -37,6 +37,10 @@ func Write(i, t string, data []byte) (string, error) {
 	}
 
 	res, err := req.Do(context.Background(), NewClient)
+	if err != nil {
+		basic.CheckError(err)
+	}
+
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		basic.CheckError(err)

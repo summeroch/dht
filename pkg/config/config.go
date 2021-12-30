@@ -7,9 +7,6 @@ import (
 )
 
 type Config struct {
-	App struct {
-		Mode string `yaml:"mode"`
-	}
 	Elasticsearch struct {
 		Addresses []string `yaml:"addresses"`
 		Username  string   `yaml:"username"`
