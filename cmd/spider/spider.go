@@ -83,11 +83,11 @@ func main() {
 	}()
 	go w.Run()
 
-	AppConfig := dht.NewCrawlConfig()
-	AppConfig.OnAnnouncePeer = func(infoHash, ip string, port int) {
+	InitConfig := dht.NewCrawlConfig()
+	InitConfig.OnAnnouncePeer = func(infoHash, ip string, port int) {
 		w.Request([]byte(infoHash), ip, port)
 	}
-	d := dht.New(AppConfig)
+	d := dht.New(InitConfig)
 
 	d.Run()
 }

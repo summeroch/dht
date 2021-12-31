@@ -6,16 +6,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/summeroch/dht-spider/pkg/config"
+	"log"
 	"math"
 	"net"
 	"time"
-)
-
-const (
-	// StandardMode follows the standard protocol
-	StandardMode = iota
-	// CrawlMode for crawling the dht network.
-	CrawlMode
 )
 
 var (
@@ -26,8 +20,8 @@ var (
 	ErrOnGetPeersResponseNotSet = errors.New("OnGetPeersResponse is not set")
 )
 
-// ConfigType represents to configure of dht.
-type ConfigType struct {
+// InitParam represents to configure of dht.
+type InitParam struct {
 	// in mainline dht, k = 8
 	K int
 	// for crawling mode, we put all nodes in one bucket, so KBucketSize may
@@ -62,7 +56,7 @@ type ConfigType struct {
 	// blacklist size
 	BlackListMaxSize int
 	// StandardMode or CrawlMode
-	Mode int
+	Mode string
 	// the times it tries when send fails
 	Try int
 	// the size of packet need to be dealt with
@@ -73,9 +67,9 @@ type ConfigType struct {
 	RefreshNodeNum int
 }
 
-// NewStandardConfig returns a ConfigType pointer with default values.
-func NewStandardConfig() *ConfigType {
-	return &ConfigType{
+// NewStandardConfig returns a InitParam pointer with default values.
+func NewStandardConfig() *InitParam {
+	return &InitParam{
 		K:                    8,
 		KBucketSize:          8,
 		Network:              "udp4",
@@ -90,7 +84,7 @@ func NewStandardConfig() *ConfigType {
 		BlockedIPs:           make([]string, 0),
 		BlackListMaxSize:     65536,
 		Try:                  2,
-		Mode:                 StandardMode,
+		Mode:                 "StandardMode",
 		PacketJobLimit:       1024,
 		PacketWorkerLimit:    256,
 		RefreshNodeNum:       8,
@@ -98,21 +92,32 @@ func NewStandardConfig() *ConfigType {
 }
 
 // NewCrawlConfig returns a config in crawling mode.
-func NewCrawlConfig() *ConfigType {
-	CrawlConfig := NewStandardConfig()
-	CrawlConfig.NodeExpireAfter = 0
-	CrawlConfig.KBucketExpiredAfter = 0
-	CrawlConfig.CheckKBucketPeriod = time.Second * 5
-	CrawlConfig.KBucketSize = math.MaxInt32
-	CrawlConfig.Mode = CrawlMode
-	CrawlConfig.RefreshNodeNum = 1024
-
-	return CrawlConfig
+func NewCrawlConfig() *InitParam {
+	return &InitParam{
+		K:                    8,
+		KBucketSize:          math.MaxInt32,
+		Network:              "udp4",
+		Address:              ":6881",
+		PrimeNodes:           config.GetConfig().Tracker.List,
+		NodeExpireAfter:      0,
+		KBucketExpiredAfter:  0,
+		CheckKBucketPeriod:   time.Second * 5,
+		TokenExpiredAfter:    time.Minute * 10,
+		MaxTransactionCursor: math.MaxUint32,
+		MaxNodes:             5000,
+		BlockedIPs:           make([]string, 0),
+		BlackListMaxSize:     65536,
+		Try:                  2,
+		Mode:                 "CrawlMode",
+		PacketJobLimit:       1024,
+		PacketWorkerLimit:    256,
+		RefreshNodeNum:       1024,
+	}
 }
 
 // DHT represents a DHT node.
 type DHT struct {
-	*ConfigType
+	*InitParam
 	node               *node
 	conn               *net.UDPConn
 	routingTable       *routingTable
@@ -127,25 +132,21 @@ type DHT struct {
 
 // New returns a DHT pointer. If config is nil, then config will be set to
 // the default config.
-func New(config *ConfigType) *DHT {
-	if config == nil {
-		config = NewStandardConfig()
-	}
-
-	node, err := newNode(randomString(20), config.Network, config.Address)
+func New(initParam *InitParam) *DHT {
+	node, err := newNode(randomString(20), initParam.Network, initParam.Address)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	d := &DHT{
-		ConfigType:   config,
+		InitParam:    initParam,
 		node:         node,
-		blackList:    newBlackList(config.BlackListMaxSize),
-		packets:      make(chan packet, config.PacketJobLimit),
-		workerTokens: make(chan struct{}, config.PacketWorkerLimit),
+		blackList:    newBlackList(initParam.BlackListMaxSize),
+		packets:      make(chan packet, initParam.PacketJobLimit),
+		workerTokens: make(chan struct{}, initParam.PacketWorkerLimit),
 	}
 
-	for _, ip := range config.BlockedIPs {
+	for _, ip := range initParam.BlockedIPs {
 		d.blackList.insert(ip, -1)
 	}
 
@@ -165,19 +166,19 @@ func New(config *ConfigType) *DHT {
 
 // IsStandardMode returns whether mode is StandardMode.
 func (dht *DHT) IsStandardMode() bool {
-	return dht.Mode == StandardMode
+	return dht.Mode == "StandardMode"
 }
 
 // IsCrawlMode returns whether mode is CrawlMode.
 func (dht *DHT) IsCrawlMode() bool {
-	return dht.Mode == CrawlMode
+	return dht.Mode == "CrawlMode"
 }
 
 // init initializes global variables.
 func (dht *DHT) init() {
 	listener, err := net.ListenPacket(dht.Network, dht.Address)
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	dht.conn = listener.(*net.UDPConn)
@@ -264,7 +265,6 @@ func (dht *DHT) Run() {
 	dht.init()
 	dht.listen()
 	dht.join()
-
 	dht.Ready = true
 
 	var pkt packet

@@ -15,7 +15,7 @@ func main() {
 	}
 	log.SetOutput(logFile)
 
-	d := dht.New(nil)
+	d := dht.New(dht.NewStandardConfig())
 	d.OnGetPeersResponse = func(infoHash string, peer *dht.Peer) {
 		log.Printf("got peer: %s:%d\n", peer.IP, peer.Port)
 	}

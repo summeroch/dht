@@ -18,9 +18,9 @@ func main() {
 	gin.DefaultWriter = io.MultiWriter(f, os.Stdout)
 	router := gin.New()
 	router.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		return fmt.Sprintf("%s - [%s] \"%s %s %s %d %s \"%s\" %s\"\n",
-			param.ClientIP,
+		return fmt.Sprintf("{\"@timestamp\":\"%s\",\"remoteAddr\":\"%s\",\"request_method\":\"%s\",\"request_uri\":\"%s\",\"protocol\":\"%s\",\"status\":\"%d\",\"requestTime\":\"%s\",\"httpUserAgent\":\"%s\",\"Errormessage\":\"%s\"}\n",
 			param.TimeStamp.Format(time.RFC3339),
+			param.ClientIP,
 			param.Method,
 			param.Path,
 			param.Request.Proto,
